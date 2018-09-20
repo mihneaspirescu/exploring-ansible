@@ -1,0 +1,37 @@
+---
+
+- name: managing error handling with handlers
+  hosts: servers
+  become: True
+  gather_facts: False
+  tasks:
+    - name: install packages or fail
+      block:
+
+        # a mock of a successful task that will trigger a handler
+        - debug:
+            msg: this task is successful
+          changed_when: yes
+          # when the task fails the notification *normally* does not fire
+          notify:
+            - show notification
+        
+
+        # when a task fails it will not run the specific handler
+        # this means that even if we have a rescue task the handler will not run
+        # even if the previous task was OK.
+        - command: /bin/false
+              
+      rescue:
+        - name: a warming message
+          debug:
+            msg: "This will run in event of a failure"
+        # allows us to run handlers even if the block failed
+        - meta: flush_handlers
+        
+  handlers:
+    - name: show notification
+      debug:
+        msg: "$$$$$ NOTIFICATION $$$$$"
+
+
