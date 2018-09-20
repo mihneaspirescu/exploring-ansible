@@ -1,0 +1,35 @@
+---
+
+- name: Configure user for use with ansible
+  hosts: servers
+  become: True
+  vars:
+    user_name: devops
+    user_keypub: /Users/mihneaspirescu/.ssh/id_rsa.pub
+  vars_files:
+    - secrets.yml #used to include the ansible vault encrypted var file
+  tasks:
+    - name: create user
+      user:
+        name: "{{ user_name }}"
+        groups: wheel
+        append: yes
+        password: "{{ user_password | password_hash('sha512') }}" # password needs to be hash not cleartext
+
+    - name: | # a fancy way split long lines
+        make sure user can run sudo 
+        commands without password
+      copy:
+        content: "{{ user_name }} ALL=(ALL) NOPASSWD:ALL" 
+        dest: "/etc/sudoers.d/{{ user_name }}"
+        owner: root
+        group: root
+
+    - name: add key to user
+      authorized_key:
+        key: "{{ item }}" # this is the content
+        user: "{{ user_name }}"
+        state: present
+
+      with_file: # command expects the content of the key and not the location.
+        - "{{ user_keypub }}"
