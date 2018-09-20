@@ -1,0 +1,28 @@
+---
+
+- name: managing error handling
+  hosts: servers
+  become: True
+  gather_facts: False
+  vars:
+    should_fail: no
+  tasks:
+    - name: install packages or fail
+      block:
+        - name: Testing failures
+          fail:
+            msg: "Oops something happened"
+          when: should_fail
+        - debug:
+            msg: > 
+              This will not run as it will fail at the previous step
+              if the package does not exist
+      rescue:
+        - name: a warming message
+          debug:
+            msg: "This will run in event of a failure"
+
+      always:
+        - debug:
+            msg: "This will always run"
+
