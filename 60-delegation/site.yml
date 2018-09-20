@@ -1,0 +1,74 @@
+---
+
+- name: setup httpd and reboot server
+  hosts: servers
+  become: True
+  tasks:
+    - name: install httpd and firewalld
+      yum:
+        name: "{{ item }}"
+        state: latest
+      with_items:
+        - httpd
+        - firewalld
+
+    - name: make sure httpd and firewalld are running 
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      with_items:
+        - httpd
+        - firewalld
+
+    - name: configure firewalld
+      firewalld:
+        service: http
+        state: enabled
+        immediate: yes
+        permanent: yes
+
+    - name: add a pretty web page
+      copy:
+        content: This is my fresh page
+        dest: /var/www/html/index.html
+        owner: apache
+        group: apache
+        mode: 0644
+
+    - name: reboot the server
+      shell: "sleep 1 && shutdown -r now" # we need shell as we are using &&
+      ignore_errors: yes # we need to ignore errors as we will lose connection to the managed server
+     
+      # fire and forget as we tell ansible to not poll the task
+      async: 1
+      poll: 0
+
+      # i don't want to see a change when i reboot the server.
+      changed_when: no
+
+    - name: wait for the server to come back up
+      wait_for:
+        # because in our inventory we specify an alias not a real fqdn
+        # we can't use the 'inventory_hostname' variable as we normally would
+        state: started
+        host: "{{ ansible_default_ipv4.address }}"
+        port: 80
+        timeout: 120
+        delay: 10  # just wait 10 seconds before checking
+      # delegate task to the localhost machine
+      delegate_to: localhost  
+      # don't elevate privileges as we are running on the managing host
+      # we set become: true on the play but we are overwriting it here.
+      become: no 
+
+
+    - name: get the content of the page
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}"
+        status_code: 200
+        return_content: yes
+      register: webpage
+
+    - debug:
+        var: webpage
