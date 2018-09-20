@@ -13,10 +13,10 @@
       user:
         name: "{{ user_name }}"
         groups: wheel
-        append: yes
+        append: yes #currently a bug and updates every time.
         password: "{{ user_password | password_hash('sha512') }}" # password needs to be hash not cleartext
-
-    - name: | # a fancy way split long lines
+      no_log: yes
+    - name: > # a fancy way split long lines
         make sure user can run sudo 
         commands without password
       copy:
