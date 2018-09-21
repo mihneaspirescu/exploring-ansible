@@ -1,0 +1,20 @@
+---
+
+
+- name: Configure play using variables
+  hosts: servers
+  become: True
+  vars:
+    app_var4: Ansible
+  # we don't need to add the variable files from host_vars and group_vars
+  # those are automatically picked up.
+  vars_files:
+    - some_other_vars.yml
+  tasks:
+    - name: add a new motd
+      copy:
+        content: |
+          "{{ app_var1 }} {{ app_var2 }}. {{ app_var3 }} {{ app_var4 }}"
+          "{{ app_var5 }}"
+        dest: /etc/motd
+

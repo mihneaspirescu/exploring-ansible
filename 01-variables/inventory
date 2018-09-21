@@ -1,1 +1,2 @@
-10.9.217.19
+[servers]
+server1 ansible_host=192.168.0.83
