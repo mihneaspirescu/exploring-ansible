@@ -4,6 +4,8 @@
   hosts: servers
   become: True
   gather_facts: False
+  vars:
+    will_fail: True
   tasks:
     - name: install packages or fail
       block:
@@ -12,23 +14,27 @@
         - debug:
             msg: this task is successful
           changed_when: yes
-          # when the task fails the notification *normally* does not fire
           notify:
             - show notification
         
-
-        # when a task fails it will not run the specific handler
-        # this means that even if we have a rescue task the handler will not run
-        # even if the previous task was OK.
+        # force the block to fail
         - command: /bin/false
-              
+          when: will_fail
+      always:
+        - debug:
+            msg: "[ALWAYS] This will run after succesfull/failed block"
       rescue:
         - name: a warming message
           debug:
-            msg: "This will run in event of a failure"
-        # allows us to run handlers even if the block failed
-        - meta: flush_handlers
+            msg: "[RESCUE] This will run in event of a failure"
         
+        # allows us to run handlers even if the block failed
+        # and more importantly it will be run here
+        - name: Forcing handlers
+          meta: flush_handlers
+      
+    - debug:
+        msg: "last message"
   handlers:
     - name: show notification
       debug:

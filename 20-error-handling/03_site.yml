@@ -1,0 +1,32 @@
+---
+
+- name: managing error handling with handlers
+  hosts: servers
+  become: True
+  gather_facts: False
+  # because we force it, handlers will always run at the end of play
+  # if they have been notified.
+  # Without this notified handlers will not run when the play fails.
+  force_handlers: True
+  vars:
+    # modify this to make the play fail or complete successfully
+    will_fail: True
+  tasks:
+    - name: task 1
+      debug:
+        msg: Task 1
+      # for debug task to change so we can trigger
+      changed_when: yes
+
+      notify:
+        - some handler
+
+    - name: force a failure
+      command: /bin/false
+      when: will_fail
+
+  handlers:
+    - name: some handler
+      debug:
+        msg: "***** notification *****"
+    
