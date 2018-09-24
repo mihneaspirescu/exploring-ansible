@@ -1,0 +1,17 @@
+server1 ansible_host=10.9.212.208
+server2 ansible_host=10.9.212.209
+server3 ansible_host=10.9.212.210
+
+
+[servers:children]
+webservers
+loadbalancers
+
+[webservers]
+server[1:2]
+
+[loadbalancers]
+server3
+
+
+

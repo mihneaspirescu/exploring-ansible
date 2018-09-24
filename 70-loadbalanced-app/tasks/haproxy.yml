@@ -1,0 +1,40 @@
+---
+
+- yum: 
+    name: "{{ item }}"
+    state: latest
+  with_items:
+    - haproxy
+    - firewalld
+- service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  with_items:
+    - haproxy
+    - firewalld
+      
+- name: configure firewall
+  firewalld:
+    service: http
+    state: enabled
+    immediate: yes
+    permanent: yes
+
+- name: add config file
+  template:
+    src: templates/haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart haproxy
+  register: result
+
+- service: 
+    name: haproxy
+    state: restarted
+  when: result is changed
+
+
+

@@ -1,0 +1,30 @@
+---
+# include the config for webservers
+- name: configure httpd
+  hosts: webservers
+  become: True
+  serial: 1
+  tags:
+    - webservers
+  vars:
+    fw_port: 80/tcp
+  tasks:
+    - include: tasks/firewall.yml
+    - include: tasks/httpd.yml
+
+  
+- name: configure haproxy
+  hosts: loadbalancers
+  tags:
+    - lb
+  become: True
+  tasks:
+    - include: tasks/haproxy.yml
+  handlers:
+  - name: restart haproxy
+    service:
+      name: haproxy
+      state: restarted
+
+
+

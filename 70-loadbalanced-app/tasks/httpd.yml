@@ -1,0 +1,105 @@
+---
+
+- name: install httpd
+  yum: 
+    name: httpd
+    state: latest
+
+- name: start httpd
+  service: 
+    name: httpd
+    state: started
+    enabled: yes
+
+
+- name: check if we already have a version
+  stat:
+    path: /tmp/index.html
+  register: stat_output
+
+
+
+- name: copy the index page to a backup
+  template:
+    src: index.html.j2
+    dest: /tmp/index.html
+  register: template_output
+
+
+- name: copy content from tmp
+  copy:
+    remote_src: yes
+    src: /tmp/index.html
+    dest: /var/www/html/index.html
+    owner: apache
+    group: apache
+    mode: 0644
+  when: stat_output.stat.exists == False
+
+- block:
+
+    - name: remove from loadblancer
+      haproxy:
+        backend: app
+        host: "{{ inventory_hostname }}"
+        state: disabled
+        wait: yes
+        socket: /var/lib/haproxy/sock
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['loadbalancers'] }}"
+
+
+    - name: copy the index page
+      copy:
+        remote_src: yes
+        src: /tmp/index.html
+        dest: /var/www/html/index.html
+        owner: apache
+        group: apache
+        mode: 0644
+
+    - name: reboot instance
+      shell: "sleep 2 && shutdown -r now"
+      async: 2
+      poll: 0
+      ignore_errors: yes
+
+    - name: waiting for the instance to come up
+      wait_for:
+        port: 22
+        delay: 10
+        timeout: 120
+        host: "{{ ansible_default_ipv4.address }}"
+        state: started
+      delegate_to: localhost
+      become: no
+
+    - name: wait for webserver to come up
+      wait_for:
+        port: 80
+        timeout: 30
+        host: "{{ ansible_default_ipv4.address }}"
+        state: started
+      delegate_to: localhost
+      become: no
+    
+    - name: attach to loadblancer
+      haproxy:
+        backend: app
+        host: "{{ inventory_hostname }}"
+        state: enabled
+        wait: yes
+        socket: /var/lib/haproxy/sock
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['loadbalancers'] }}"
+
+  rescue:
+    - name: recovery task
+      debug:
+        msg: Something happend. you can recover here...
+  
+  when: 
+    - template_output.changed
+    - stat_output.stat.exists
+
+

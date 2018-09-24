@@ -1,0 +1,20 @@
+---
+
+- name: install firewalld
+  yum: 
+    name: firewalld
+    state: latest
+
+- name: configure firewalld to start
+  service:
+    name: firewalld
+    state: started
+    enabled: true
+
+- name: configure firewalld
+  firewalld:
+    state: enabled
+    port: "{{ fw_port }}"
+    immediate: yes
+    permanent: yes
+
